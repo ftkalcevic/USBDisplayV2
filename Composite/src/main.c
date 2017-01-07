@@ -81,6 +81,12 @@ int main (void)
 		{
 			udi_hid_touch_move( touch_x, touch_y, (touch_z1+touch_z2)/2 );
 		}
+
+		while ( udi_cdc_is_rx_ready() )
+		{
+			int c = udi_cdc_getc();
+			udi_cdc_putc('-'); udi_cdc_putc(c);
+		}
 	}
 }
 
