@@ -80,10 +80,16 @@ int main (void)
 		else if ( touch_complete() )
 		{
 			udi_hid_touch_move( touch_x, touch_y, (touch_z1+touch_z2)/2 );
+			udi_cdc_putc(HEX((touch_x>>12)&0xf));
+			udi_cdc_putc(HEX((touch_x>>8)&0xf));
+			udi_cdc_putc(HEX((touch_x>>4)&0xf));
+			udi_cdc_putc(HEX((touch_x>>0)&0xf));
+			udi_cdc_putc('\n');
 		}
 
 		while ( udi_cdc_is_rx_ready() )
 		{
+			
 			int c = udi_cdc_getc();
 			udi_cdc_putc('-'); udi_cdc_putc(c);
 		}

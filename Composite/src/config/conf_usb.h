@@ -247,7 +247,7 @@ extern uint8_t usb_serial_number[]; // Declare external serial array
  * #define  UDI_HID_GENERIC_SET_FEATURE(f) my_callback_generic_set_feature(f)
  * extern void my_callback_generic_set_feature(uint8_t *report_feature);
  */
-#define  UDI_HID_REPORT_IN_SIZE             2
+#define  UDI_HID_REPORT_IN_SIZE             1
 //#define  UDI_HID_REPORT_OUT_SIZE            64
 //#define  UDI_HID_REPORT_FEATURE_SIZE        4
 #define  UDI_HID_GENERIC_EP_SIZE            64

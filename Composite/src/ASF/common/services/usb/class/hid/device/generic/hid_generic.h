@@ -1,7 +1,7 @@
 // C:\Projects\Composite\Composite\src\ASF\common\services\usb\class\hid\device\generic\hid_generic.h
 
 
-char ReportDescriptor[21] = {
+char ReportDescriptor[25] = {
     0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
     0x09, 0x04,                    // USAGE (Joystick)
     0xa1, 0x01,                    // COLLECTION (Application)
@@ -11,6 +11,8 @@ char ReportDescriptor[21] = {
     0x29, 0x08,                    //   USAGE_MAXIMUM (Button 8)
     0x75, 0x01,                    //   REPORT_SIZE (1)
     0x95, 0x08,                    //   REPORT_COUNT (8)
+    0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
+    0x25, 0x01,                    //   LOGICAL_MAXIMUM (1)
     0x81, 0x02,                    //   INPUT (Data,Var,Abs)
     0xc0                           // END_COLLECTION
 };

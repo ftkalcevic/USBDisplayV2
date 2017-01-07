@@ -83,7 +83,7 @@ typedef struct {
 
 //! Report descriptor for HID touch
 typedef struct {
-	uint8_t array[48];
+	uint8_t array[55];
 } udi_hid_touch_report_desc_t;
 
 

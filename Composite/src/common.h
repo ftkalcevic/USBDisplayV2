@@ -11,6 +11,7 @@
 
 
 #define countof(x)		(sizeof(x)/sizeof((x)[0]))
+#define HEX(x)			( (x) < 10 ? (x) + '0' : (x) + 'A' - 10 )
 
 
 #endif /* COMMON_H_ */

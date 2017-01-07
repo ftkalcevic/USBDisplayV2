@@ -52,6 +52,11 @@
  * running the ASF driver selector tool. Any changes will be discarded.
  */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 // From module: CPU Cycle Counter
 #include <cycle_counter.h>
 
@@ -121,5 +126,10 @@
 
 // From module: USB Vendor Protocol
 #include <usb_protocol_vendor.h>
+
+#ifdef __cplusplus
+};
+#endif
+
 
 #endif // ASF_H
