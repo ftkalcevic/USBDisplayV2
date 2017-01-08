@@ -61,8 +61,8 @@
 #define  USB_DEVICE_MINOR_VERSION         0
 #define  USB_DEVICE_POWER                 200 // Consumption on VBUS line (mA)
 #define  USB_DEVICE_ATTR                  \
-		(USB_CONFIG_ATTR_SELF_POWERED)
-// (USB_CONFIG_ATTR_BUS_POWERED)
+ (USB_CONFIG_ATTR_BUS_POWERED)
+//		(USB_CONFIG_ATTR_SELF_POWERED)
 // (USB_CONFIG_ATTR_REMOTE_WAKEUP|USB_CONFIG_ATTR_SELF_POWERED)
 // (USB_CONFIG_ATTR_REMOTE_WAKEUP|USB_CONFIG_ATTR_BUS_POWERED)
 
@@ -345,7 +345,7 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
 	.udi_cdc_data              = UDI_CDC_DATA_DESC_0_FS, \
 	.udi_hid_touch             = UDI_HID_TOUCH_DESC, \
 	.udi_hid_generic           = UDI_HID_GENERIC_DESC, \
-	.udi_vendor				   = UDI_VENDOR_DESC
+	.udi_vendor				   = UDI_VENDOR_DESC(UDI_VENDOR_EPS_SIZE_BULK_FS)
 
 //! USB Interfaces descriptor value for High Speed
 #define UDI_COMPOSITE_DESC_HS \
@@ -354,7 +354,7 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
 	.udi_cdc_data              = UDI_CDC_DATA_DESC_0_HS, \
 	.udi_hid_touch             = UDI_HID_TOUCH_DESC, \
 	.udi_hid_generic           = UDI_HID_GENERIC_DESC, \
-	.udi_vendor				   = UDI_VENDOR_DESC
+	.udi_vendor				   = UDI_VENDOR_DESC(UDI_VENDOR_EPS_SIZE_BULK_HS)
 
 //! USB Interface APIs
 #define UDI_COMPOSITE_API   \

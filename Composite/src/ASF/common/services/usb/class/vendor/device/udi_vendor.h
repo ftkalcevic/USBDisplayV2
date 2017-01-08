@@ -124,12 +124,13 @@ extern UDC_DESC_STORAGE udi_api_t udi_api_vendor;
 #endif
 
 #if UDI_VENDOR_EPS_SIZE_BULK_FS
-# define UDI_VENDOR_EPS_BULK_DESC \
+# define UDI_VENDOR_EPS_BULK_DESC(len) \
 	.ep_bulk_out.bLength               = sizeof(usb_ep_desc_t),\
 	.ep_bulk_out.bDescriptorType       = USB_DT_ENDPOINT,\
 	.ep_bulk_out.bEndpointAddress      = UDI_VENDOR_EP_BULK_OUT,\
 	.ep_bulk_out.bmAttributes          = USB_EP_TYPE_BULK,\
-	.ep_bulk_out.bInterval             = 0,
+	.ep_bulk_out.bInterval             = 0, \
+	.ep_bulk_out.wMaxPacketSize        = LE16(len),
 
 # define UDI_VENDOR_EPS_BULK_DESC_FS \
 	.ep_bulk_out.wMaxPacketSize        = LE16(UDI_VENDOR_EPS_SIZE_BULK_FS),
@@ -198,13 +199,13 @@ typedef struct {
 
 //! Maximum 6 endpoints used by vendor interface
 #define UDI_VENDOR_EP_NB_INT  ((UDI_VENDOR_EPS_SIZE_INT_FS)?2:0)
-#define UDI_VENDOR_EP_NB_BULK ((UDI_VENDOR_EPS_SIZE_BULK_FS)?2:0)
+#define UDI_VENDOR_EP_NB_BULK (1)
 #define UDI_VENDOR_EP_NB_ISO  ((UDI_VENDOR_EPS_SIZE_ISO_FS)?2:0)
 #define UDI_VENDOR_EP_NB      (UDI_VENDOR_EP_NB_INT+UDI_VENDOR_EP_NB_BULK+UDI_VENDOR_EP_NB_ISO)
 
 
 //! Content of vendor interface descriptor for all speeds
-#define UDI_VENDOR_DESC      { \
+#define UDI_VENDOR_DESC(len)      { \
 	.iface0.bLength            = sizeof(usb_iface_desc_t),\
 	.iface0.bDescriptorType    = USB_DT_INTERFACE,\
 	.iface0.bInterfaceNumber   = UDI_VENDOR_IFACE_NUMBER,\
@@ -224,12 +225,12 @@ typedef struct {
 	.iface1.bInterfaceProtocol = VENDOR_PROTOCOL,\
 	.iface1.iInterface         = UDI_VENDOR_STRING_ID,\
 	UDI_VENDOR_EPS_INT_DESC \
-	UDI_VENDOR_EPS_BULK_DESC \
+	UDI_VENDOR_EPS_BULK_DESC(len) \
 	UDI_VENDOR_EPS_ISO_DESC }
 
 //! Content of vendor interface descriptor for full speed only
 #define UDI_VENDOR_DESC_FS {\
-	UDI_VENDOR_DESC \
+	UDI_VENDOR_DESC(UDI_VENDOR_EPS_SIZE_BULK_FS) \
 	UDI_VENDOR_EPS_INT_DESC_FS \
 	UDI_VENDOR_EPS_BULK_DESC_FS \
 	UDI_VENDOR_EPS_ISO_DESC_FS \
@@ -237,7 +238,7 @@ typedef struct {
 
 //! Content of vendor interface descriptor for high speed only
 #define UDI_VENDOR_DESC_HS   {\
-	UDI_VENDOR_DESC \
+	UDI_VENDOR_DESC(UDI_VENDOR_EPS_SIZE_BULK_HS) \
 	UDI_VENDOR_EPS_INT_DESC_HS \
 	UDI_VENDOR_EPS_BULK_DESC_HS \
 	UDI_VENDOR_EPS_ISO_DESC_HS \
