@@ -53,8 +53,7 @@
  */
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 // From module: CPU Cycle Counter
@@ -99,6 +98,9 @@ extern "C"
 // From module: System Clock Control - UC3 A3/A4 implementation
 #include <sysclk.h>
 
+// From module: TC - Timer/Counter
+#include <tc.h>
+
 // From module: USB CDC Protocol
 #include <usb_protocol_cdc.h>
 
@@ -127,9 +129,11 @@ extern "C"
 // From module: USB Vendor Protocol
 #include <usb_protocol_vendor.h>
 
+// From module: WDT Watchdog Timer - UC3 A0/A1/A3/A4/B0/B1 implementation
+#include <wdt.h>
+
 #ifdef __cplusplus
 };
 #endif
-
 
 #endif // ASF_H

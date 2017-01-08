@@ -192,8 +192,9 @@ typedef struct {
 
 //! By default no string associated to this interface
 #ifndef UDI_VENDOR_STRING_ID
-#define UDI_VENDOR_STRING_ID     0
+#define UDI_VENDOR_STRING_ID     5
 #endif
+#define UDI_VENDOR_STRING		"LCD Framebuffer"
 
 //! Maximum 6 endpoints used by vendor interface
 #define UDI_VENDOR_EP_NB_INT  ((UDI_VENDOR_EPS_SIZE_INT_FS)?2:0)

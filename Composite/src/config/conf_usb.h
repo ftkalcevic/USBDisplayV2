@@ -108,7 +108,10 @@ extern uint8_t usb_serial_number[]; // Declare external serial array
 // extern void user_callback_remotewakeup_disable(void);
 //! When a extra string descriptor must be supported
 //! other than manufacturer, product and serial string
-// #define  UDC_GET_EXTRA_STRING()
+#define  UDC_GET_EXTRA_STRING(id,pStr,pLen)		 udc_get_extra_string(id,pStr,pLen)
+extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen);
+
+
 //@}
 
 /**

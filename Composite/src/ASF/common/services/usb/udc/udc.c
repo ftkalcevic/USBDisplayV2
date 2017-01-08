@@ -120,13 +120,6 @@ static uint8_t udc_string_product_name[] = USB_DEVICE_PRODUCT_NAME;
 #  define USB_DEVICE_PRODUCT_NAME_SIZE  0
 #endif
 
-#ifdef UDI_HID_TOUCH_STRING
-static uint8_t udc_string_touch_interface_name[] = UDI_HID_TOUCH_STRING;
-#  define UDI_HID_TOUCH_STRING_SIZE  (sizeof(udc_string_touch_interface_name)-1)
-#else
-#  define UDI_HID_TOUCH_STRING_SIZE  0
-#endif
-
 /**
  * \brief Get USB device serial number
  *
@@ -160,8 +153,7 @@ static uint8_t udc_string_touch_interface_name[] = UDI_HID_TOUCH_STRING;
  */
 struct udc_string_desc_t {
 	usb_str_desc_t header;
-	le16_t string[Max(Max(USB_DEVICE_MANUFACTURE_NAME_SIZE, \
-			USB_DEVICE_PRODUCT_NAME_SIZE), USB_DEVICE_SERIAL_NAME_SIZE)];
+	le16_t string[126];	// max string len = 126 (256-2)/2Unicode
 };
 COMPILER_WORD_ALIGNED
 static UDC_DESC_STORAGE struct udc_string_desc_t udc_string_desc = {
@@ -647,16 +639,10 @@ static bool udc_req_std_dev_get_str_desc(void)
 		str = udc_get_string_serial_name();
 		break;
 #endif
-#ifdef UDI_HID_TOUCH_STRING
-	case 4:
-		str_length = UDI_HID_TOUCH_STRING_SIZE;
-		str = udc_string_touch_interface_name;
-		break;
-#endif
 
 	default:
 #ifdef UDC_GET_EXTRA_STRING
-		if (UDC_GET_EXTRA_STRING()) {
+		if (UDC_GET_EXTRA_STRING(udd_g_ctrlreq.req.wValue & 0xff,&str,&str_length)) {
 			break;
 		}
 #endif

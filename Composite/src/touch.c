@@ -46,10 +46,10 @@ uint16_t touch_z2;
 
 static struct STouchMsg msg[] =
 { 
-	{ CONTROL( START, ADR_MEASURE_X, MODE_12BIT, DFR, PD_BETWEEN_CONV ), 0, 0},
-	{ CONTROL( START, ADR_MEASURE_Y, MODE_12BIT, DFR, PD_BETWEEN_CONV ), 0, 0},
-	{ CONTROL( START, ADR_MEASURE_Z1, MODE_12BIT, DFR, PD_BETWEEN_CONV ), 0, 0},
-	{ CONTROL( START, ADR_MEASURE_Z2, MODE_12BIT, DFR, PD_BETWEEN_CONV ), 0, 0}
+	{{{ CONTROL( START, ADR_MEASURE_X, MODE_12BIT, DFR, PD_BETWEEN_CONV ),  0, 0}}},
+	{{{ CONTROL( START, ADR_MEASURE_Y, MODE_12BIT, DFR, PD_BETWEEN_CONV ),  0, 0}}},
+	{{{ CONTROL( START, ADR_MEASURE_Z1, MODE_12BIT, DFR, PD_BETWEEN_CONV ), 0, 0}}},
+	{{{ CONTROL( START, ADR_MEASURE_Z2, MODE_12BIT, DFR, PD_BETWEEN_CONV ), 0, 0}}}
 };
 
 static struct STouchMsg  return_msg[countof(msg)];
@@ -147,12 +147,12 @@ void touch_init( void )
 	spi_set_mode(&AVR32_SPI1,1,0);
 	spi_enable(&AVR32_SPI1);
 
-	AVR32_PDCA.channel[0].mar = msg;
+	AVR32_PDCA.channel[0].mar = (unsigned long)msg;
 	AVR32_PDCA.channel[0].PSR.pid = AVR32_PDCA_PID_SPI1_TX;
 	AVR32_PDCA.channel[0].TCR.tcv = sizeof(msg);
 	AVR32_PDCA.channel[0].MR.size = AVR32_PDCA_MR_SIZE_BYTE;
 		
-	AVR32_PDCA.channel[1].mar = return_msg;
+	AVR32_PDCA.channel[1].mar = (unsigned long)return_msg;
 	AVR32_PDCA.channel[1].PSR.pid = AVR32_PDCA_PID_SPI1_RX;
 	AVR32_PDCA.channel[1].TCR.tcv = sizeof(return_msg);
 	AVR32_PDCA.channel[1].MR.size = AVR32_PDCA_MR_SIZE_BYTE;
@@ -166,8 +166,8 @@ void touch_init_read( void )
 	bTouchBusy = true;
 	
 	// Setup DMA Read
-	AVR32_PDCA.channel[0].mar = msg;
-	AVR32_PDCA.channel[1].mar = return_msg;
+	AVR32_PDCA.channel[0].mar = (unsigned long)msg;
+	AVR32_PDCA.channel[1].mar = (unsigned long)return_msg;
 	AVR32_PDCA.channel[1].TCR.tcv = sizeof(return_msg);	// Set counts
 	AVR32_PDCA.channel[0].TCR.tcv = sizeof(msg);
 	AVR32_PDCA.channel[1].IER.trc = AVR32_PDCA_IER_TRC;	// Interrupt on transfer complete

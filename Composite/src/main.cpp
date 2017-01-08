@@ -28,9 +28,28 @@
 /*
  * Support and FAQ: visit <a href="http://www.atmel.com/design-support/">Atmel Support</a>
  */
+#include <stdio.h>
 #include <asf.h>
+#include "common.h"
 #include "touch.h"
+#include "lcdtext.h"
+#include "lcd_conf.h"
+#include "lcdiface_hx8352a.h"
+#include "lcdiface_ssd1963.h"
+#include "lcdtext.h"
 
+#include "../fonts/Font6x13.h"
+//#include "../fonts/FontTypewriter.h"
+
+static struct SFontData  fontData[] =
+{
+	/*45x17*/    { FONT6X13_WIDTH, FONT6X13_HEIGHT, SCREEN_WIDTH / FONT6X13_WIDTH, SCREEN_HEIGHT / FONT6X13_HEIGHT, Font6x13 },
+	//	/*22x9 */    { FONTTYPEWRITER_WIDTH, FONTTYPEWRITER_HEIGHT, SCREEN_WIDTH / FONTTYPEWRITER_WIDTH, SCREEN_HEIGHT / FONTTYPEWRITER_HEIGHT, FontTypewriter },
+};
+
+
+TLCD lcd;
+TLCDText lcdtext(lcd, fontData, countof(fontData) );
 
 uint8_t usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH];
 
@@ -48,6 +67,19 @@ static void init_usb_serial_number(void)
 	}
 }
 
+
+
+static void DisplayStartupMsg()
+{
+	lcdtext.SetAutoScroll(false);
+	lcdtext.SetTextCursor(0,0);
+	char s[200];
+	snprintf( s, sizeof(s), "%s %s %d.%d\n", USB_DEVICE_PRODUCT_NAME, USB_DEVICE_MANUFACTURE_NAME, USB_DEVICE_MAJOR_VERSION, USB_DEVICE_MINOR_VERSION );
+	s[sizeof(s)-1] = '\0';
+	lcdtext.WriteString( s );
+}
+
+
 int main (void)
 {
 	/* Insert system clock initialization code here (sysclk_init()). */
@@ -56,11 +88,16 @@ int main (void)
 
 	sysclk_init();
 	board_init();
+
+	lcd.Init();
 	touch_init();
 	sleepmgr_init();
 	init_usb_serial_number();
 	udc_start();
 	udc_attach();
+
+	lcd.ClearScreen(0);
+	DisplayStartupMsg();
 
 	// Force read for the first time to reset the touch controller
 	touch_init_read();
