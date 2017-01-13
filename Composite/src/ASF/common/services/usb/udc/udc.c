@@ -769,6 +769,13 @@ static bool udc_req_std_dev_get_descriptor(void)
 		}
 		break;
 
+	case USB_DT_LCD:
+		udd_set_setup_payload(
+		(uint8_t *) udc_config.lcd,
+		udc_config.lcd->bFunctionLength);
+		break;
+			
+
 	default:
 		// Unknown descriptor requested
 		return false;

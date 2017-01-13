@@ -130,7 +130,7 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
 //! Note:
 //! It is possible to define an IN and OUT endpoints with the same number on XMEGA product only
 //! E.g. MSC class can be have IN endpoint 0x81 and OUT endpoint 0x01
-#define  USB_DEVICE_MAX_EP             7 // 0 to max endpoint requested by interfaces
+#define  USB_DEVICE_MAX_EP             6 // 0 to max endpoint requested by interfaces
 //@}
 
 //@}
@@ -140,6 +140,56 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
  * USB Interface Configuration
  * @{
  */
+
+
+ 
+/**
+ * Configuration of Class Vendor interface (if used)
+ * @{
+ */
+
+//! Interface callback definition
+#define  UDI_VENDOR_ENABLE_EXT()          true
+#define  UDI_VENDOR_DISABLE_EXT()
+#define  UDI_VENDOR_SETUP_OUT_RECEIVED()  false
+#define  UDI_VENDOR_SETUP_IN_RECEIVED()   false
+/*
+ * #define UDI_VENDOR_ENABLE_EXT() my_callback_vendor_enable()
+ * extern bool my_callback_vendor_enable(void);
+ * #define UDI_VENDOR_DISABLE_EXT() my_callback_vendor_disable()
+ * extern void my_callback_vendor_disable(void);
+ *
+ * #define  UDI_VENDOR_SETUP_OUT_RECEIVED()  my_vendor_setup_out_received()
+ * extern bool my_vendor_setup_out_received(void);
+ * #define  UDI_VENDOR_SETUP_IN_RECEIVED()   my_vendor_setup_in_received()
+ * extern bool my_vendor_setup_in_received(void);
+ */
+
+//! endpoints size for full speed
+#define  UDI_VENDOR_EPS_SIZE_INT_FS    0
+#define  UDI_VENDOR_EPS_SIZE_BULK_FS   64
+#define  UDI_VENDOR_EPS_SIZE_ISO_FS    0
+
+//! endpoints size for high speed
+#define  UDI_VENDOR_EPS_SIZE_INT_HS    0
+#define  UDI_VENDOR_EPS_SIZE_BULK_HS   512
+#define  UDI_VENDOR_EPS_SIZE_ISO_HS    0
+
+/**
+ * USB Class Vendor low level configuration
+ * In standalone these configurations are defined by the Class Vendor module.
+ * For composite device, these configuration must be defined here
+ * @{
+ */
+//! Endpoint numbers definition
+#define  UDI_VENDOR_EP_BULK_OUT      (1 | USB_EP_DIR_OUT)
+
+
+//! Interface number
+#define  UDI_VENDOR_IFACE_NUMBER     0
+//@}
+//@}
+
 
 /**
  * Configuration of CDC interface (if used)
@@ -191,14 +241,14 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
  * @{
  */
 //! Endpoints' numbers used by single or first CDC port
-#define  UDI_CDC_DATA_EP_IN_0          (1 | USB_EP_DIR_IN)  // TX
-#define  UDI_CDC_DATA_EP_OUT_0         (2 | USB_EP_DIR_OUT) // RX
-#define  UDI_CDC_COMM_EP_0             (3 | USB_EP_DIR_IN)  // Notify endpoint
+#define  UDI_CDC_COMM_EP_0             (2 | USB_EP_DIR_IN)  // Notify endpoint
+#define  UDI_CDC_DATA_EP_IN_0          (3 | USB_EP_DIR_IN)  // TX
+#define  UDI_CDC_DATA_EP_OUT_0         (4 | USB_EP_DIR_OUT) // RX
 
 
 //! Interface numbers used by single or first CDC port
-#define  UDI_CDC_COMM_IFACE_NUMBER_0   0
-#define  UDI_CDC_DATA_IFACE_NUMBER_0   1
+#define  UDI_CDC_COMM_IFACE_NUMBER_0   1
+#define  UDI_CDC_DATA_IFACE_NUMBER_0   2
 //@}
 //@}
 
@@ -223,10 +273,10 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
  * @{
  */
 //! Endpoint numbers definition
-#define  UDI_HID_TOUCH_EP_IN           (4 | USB_EP_DIR_IN)
+#define  UDI_HID_TOUCH_EP_IN           (5 | USB_EP_DIR_IN)
 
 //! Interface number
-#define  UDI_HID_TOUCH_IFACE_NUMBER    2
+#define  UDI_HID_TOUCH_IFACE_NUMBER    3
 //@}
 //@}
 
@@ -266,57 +316,10 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
 #define  UDI_HID_GENERIC_EP_IN    (6 | USB_EP_DIR_IN)
 
 //! Interface number
-#define  UDI_HID_GENERIC_IFACE_NUMBER    3
+#define  UDI_HID_GENERIC_IFACE_NUMBER    4
 //@}
 //@}
 
-
-/**
- * Configuration of Class Vendor interface (if used)
- * @{
- */
-
-//! Interface callback definition
-#define  UDI_VENDOR_ENABLE_EXT()          true
-#define  UDI_VENDOR_DISABLE_EXT()
-#define  UDI_VENDOR_SETUP_OUT_RECEIVED()  false
-#define  UDI_VENDOR_SETUP_IN_RECEIVED()   false
-/*
- * #define UDI_VENDOR_ENABLE_EXT() my_callback_vendor_enable()
- * extern bool my_callback_vendor_enable(void);
- * #define UDI_VENDOR_DISABLE_EXT() my_callback_vendor_disable()
- * extern void my_callback_vendor_disable(void);
- *
- * #define  UDI_VENDOR_SETUP_OUT_RECEIVED()  my_vendor_setup_out_received()
- * extern bool my_vendor_setup_out_received(void);
- * #define  UDI_VENDOR_SETUP_IN_RECEIVED()   my_vendor_setup_in_received()
- * extern bool my_vendor_setup_in_received(void);
- */
-
-//! endpoints size for full speed
-#define  UDI_VENDOR_EPS_SIZE_INT_FS    0
-#define  UDI_VENDOR_EPS_SIZE_BULK_FS   64
-#define  UDI_VENDOR_EPS_SIZE_ISO_FS    0
-
-//! endpoints size for high speed
-#define  UDI_VENDOR_EPS_SIZE_INT_HS    0
-#define  UDI_VENDOR_EPS_SIZE_BULK_HS   512
-#define  UDI_VENDOR_EPS_SIZE_ISO_HS    0
-
-/**
- * USB Class Vendor low level configuration
- * In standalone these configurations are defined by the Class Vendor module.
- * For composite device, these configuration must be defined here
- * @{
- */
-//! Endpoint numbers definition
-#define  UDI_VENDOR_EP_BULK_OUT      (7 | USB_EP_DIR_OUT)
-
-
-//! Interface number
-#define  UDI_VENDOR_IFACE_NUMBER     4
-//@}
-//@}
 
 //... Eventually add other Interface Configuration
 
@@ -331,12 +334,12 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
 
 
 #define UDI_COMPOSITE_DESC_T \
+	udi_vendor_desc_t udi_vendor; \
 	usb_iad_desc_t udi_cdc_iad; \
 	udi_cdc_comm_desc_t udi_cdc_comm; \
 	udi_cdc_data_desc_t udi_cdc_data; \
 	udi_hid_touch_desc_t udi_hid_touch; \
-	udi_hid_generic_desc_t udi_hid_generic; \
-	udi_vendor_desc_t udi_vendor
+	udi_hid_generic_desc_t udi_hid_generic;
 
 //! USB Interfaces descriptor value for Full Speed
 #define UDI_COMPOSITE_DESC_FS \
@@ -358,11 +361,11 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
 
 //! USB Interface APIs
 #define UDI_COMPOSITE_API   \
+	&udi_api_vendor,		\
 	&udi_api_cdc_comm,      \
 	&udi_api_cdc_data,      \
 	&udi_api_hid_touch,		\
-	&udi_api_hid_generic,	\
-	&udi_api_vendor
+	&udi_api_hid_generic
 
 
 //@}
@@ -384,6 +387,8 @@ extern bool udc_get_extra_string(uint8_t id, const uint8_t **pStr, uint8_t *pLen
 
 /* Declaration of callbacks used by USB */
 //#include "callback_def.h"
+
+#define UDD_BULK_NB_BANK(ep) (ep==(UDI_VENDOR_EP_BULK_OUT & USB_EP_ADDR_MASK)?2:1)	
 
 
 #endif // _CONF_USB_H_

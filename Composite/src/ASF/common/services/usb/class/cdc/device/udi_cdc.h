@@ -564,7 +564,7 @@ bool udi_cdc_multi_is_tx_ready(uint8_t port);
  *
  * \return \c 1 if function was successfully done, otherwise \c 0.
  */
-int udi_cdc_multi_putc(uint8_t port, int value);
+int udi_cdc_multi_putc(uint8_t port, int value, bool block);
 
 /**
  * \brief Writes a RAM buffer on CDC line

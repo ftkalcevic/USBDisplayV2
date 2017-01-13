@@ -48,6 +48,8 @@
 #include "udd.h"
 #include "udc_desc.h"
 
+#include "lcd_conf.h"
+
 /**
  * \defgroup udi_group_desc Descriptors for a USB Device
  * composite
@@ -168,6 +170,8 @@ UDC_DESC_STORAGE udc_config_speed_t   udc_config_hs[1] = {{
 }};
 #endif
 
+UDC_DESC_STORAGE usb_lcd_desc_t lcd_desc = UDI_LCD_DESC;
+
 //! Add all information about USB Device in global structure for UDC
 UDC_DESC_STORAGE udc_config_t udc_config = {
 	.confdev_lsfs = &udc_device_desc,
@@ -177,6 +181,7 @@ UDC_DESC_STORAGE udc_config_t udc_config = {
 	.qualifier = &udc_device_qual,
 	.conf_hs = udc_config_hs,
 #endif
+	.lcd = &lcd_desc, 
 };
 
 //@}

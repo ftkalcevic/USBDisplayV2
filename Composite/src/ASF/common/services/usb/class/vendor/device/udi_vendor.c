@@ -44,6 +44,7 @@
  * Support and FAQ: visit <a href="http://www.atmel.com/design-support/">Atmel Support</a>
  */
 
+#include "asf.h"
 #include "conf_usb.h"
 #include "usb_protocol.h"
 #include "usb_protocol_vendor.h"
@@ -51,23 +52,20 @@
 #include "udc.h"
 #include "udi_vendor.h"
 #include <string.h>
-
-// Configuration check
-#ifndef UDI_VENDOR_ENABLE_EXT
-# error UDI_VENDOR_ENABLE_EXT must be defined in conf_usb.h file.
-#endif
-#ifndef UDI_VENDOR_DISABLE_EXT
-# error UDI_VENDOR_DISABLE_EXT must be defined in conf_usb.h file.
-#endif
+#include "lcd_conf.h"
+#include "displaycommands.h"
 
 /**
- * \ingroup udi_vendor_group
- * \defgroup udi_vendor_group_udc Interface with USB Device Core (UDC)
  *
  * Structures and functions required by UDC.
  *
  * @{
  */
+
+static bool udi_lcd_rx_start(void);
+static bool udi_lcd_is_rx_ready(void);
+static void udi_lcd_data_recevied(udd_ep_status_t status, iram_size_t n);
+
 bool udi_vendor_enable(void);
 void udi_vendor_disable(void);
 bool udi_vendor_setup(void);
@@ -83,17 +81,37 @@ UDC_DESC_STORAGE udi_api_t udi_api_vendor = {
 };
 //@}
 
+#define UDI_LCD_RX_BUFFERS     (2)
+
+#define NEXT_BUFFER(idx) ((idx==0)?1:0)
+//#define NEXT_BUFFER(idx) ((idx==UDI_LCD_RX_BUFFERS-1)?0:idx+1)
+
+//! Status of LCD interface
+static volatile bool udi_lcd_running;
+
+typedef union _RXBuffer
+{
+	CmdAll cmd;
+	uint8_t buf[UDI_VENDOR_EPS_SIZE_BULK_HS];
+} RXBuffer;
+
+//! Buffer to receive data
+COMPILER_WORD_ALIGNED static RXBuffer rx_buffer[UDI_LCD_RX_BUFFERS];
+//! Data available in RX buffers
+static uint16_t udi_lcd_rx_buf_nb[UDI_LCD_RX_BUFFERS];
+//! Give the current RX buffer used (rx0 if 0, rx1 if 1)
+static volatile uint8_t udi_lcd_rx_buf_sel;
+//! Read position in current RX buffer
+static volatile uint16_t udi_lcd_rx_pos;
+static volatile uint32_t udi_lcd_blt_bytes_to_go;
+//! Signal a transfer on-going
+static volatile bool udi_lcd_rx_trans_ongoing;
 
 /**
- * \ingroup udi_vendor_group
- * \defgroup udi_vendor_group_internal Implementation of UDI Vendor Class
- *
  * Class internal implementation
  * @{
  */
 
-//! USB descriptor alternate setting used
-static uint8_t udi_vendor_alternate_setting = 0;
 
 /**
  * \name Internal routines
@@ -101,196 +119,146 @@ static uint8_t udi_vendor_alternate_setting = 0;
 //@{
 bool udi_vendor_enable(void)
 {
-	udi_vendor_alternate_setting = udc_get_interface_desc()->bAlternateSetting;
-	if (1 == udi_vendor_alternate_setting) {
-		// Call application callback
-		// to notify that interface is enabled
-		if (!UDI_VENDOR_ENABLE_EXT()) {
-			return false;
-		}
-	}
-	return true;
+	// Initialize RX management
+	udi_lcd_rx_trans_ongoing = false;
+	udi_lcd_rx_buf_sel = 0;
+	udi_lcd_rx_buf_nb[0] = 0;
+	udi_lcd_rx_pos = 0;
+	udi_lcd_blt_bytes_to_go = 0;
+	udi_lcd_running = udi_lcd_rx_start();
+	return udi_lcd_running;
 }
 
 
 void udi_vendor_disable(void)
 {
-	if (1 == udi_vendor_alternate_setting) {
-		UDI_VENDOR_DISABLE_EXT();
-	}
 }
 
 
 bool udi_vendor_setup(void)
 {
-	if (Udd_setup_is_in()) {
-		if ((Udd_setup_type() == USB_REQ_TYPE_VENDOR)
-				&& (udd_g_ctrlreq.req.bRequest == 0)) {
-			return UDI_VENDOR_SETUP_IN_RECEIVED();
-		}
-	}
-	if (Udd_setup_is_out()) {
-		if ((Udd_setup_type() == USB_REQ_TYPE_VENDOR)
-				&& (udd_g_ctrlreq.req.bRequest == 0)
-				&& (0 != udd_g_ctrlreq.req.wLength)) {
-			return UDI_VENDOR_SETUP_OUT_RECEIVED();
-		}
-	}
 	return false; // Not supported request
 }
 
 uint8_t udi_vendor_getsetting(void)
 {
-	return udi_vendor_alternate_setting;
+	return 0;
 }
 //@}
 
-#if UDI_VENDOR_EPS_SIZE_INT_FS
-/**
- * \brief Start a transfer on interrupt IN
- *
- * When the transfer is finished or aborted (stall, reset, ...), the \a callback is called.
- * The \a callback returns the transfer status and eventually the number of byte transfered.
- *
- * \param buf           Buffer on Internal RAM to send or fill.
- *                      It must be align, then use COMPILER_WORD_ALIGNED.
- * \param buf_size      Buffer size to send or fill
- * \param callback      NULL or function to call at the end of transfer
- *
- * \return \c 1 if function was successfully done, otherwise \c 0.
- */
-bool udi_vendor_interrupt_in_run(uint8_t * buf, iram_size_t buf_size,
-		udd_callback_trans_t callback)
+
+
+
+static bool udi_lcd_rx_start(void)
 {
-	return udd_ep_run(UDI_VENDOR_EP_INTERRUPT_IN,
-			false,
-			buf,
-			buf_size,
-			callback);
+	irqflags_t flags;
+	uint8_t buf_sel_trans;
+
+	flags = cpu_irq_save();
+	buf_sel_trans = udi_lcd_rx_buf_sel;
+	if (udi_lcd_rx_trans_ongoing ||
+	(udi_lcd_rx_pos < udi_lcd_rx_buf_nb[buf_sel_trans])) {
+		// Transfer already on-going or current buffer no empty
+		cpu_irq_restore(flags);
+		return false;
+	}
+
+	// Change current buffer
+	udi_lcd_rx_pos = 0;
+	udi_lcd_rx_buf_sel = NEXT_BUFFER(buf_sel_trans);
+
+	// Start transfer on RX
+	udi_lcd_rx_trans_ongoing = true;
+	cpu_irq_restore(flags);
+	
+	//if (udi_lcd_is_rx_ready()) {
+		//UDI_LCD_RX_NOTIFY();
+	//}
+
+	if ( udi_lcd_blt_bytes_to_go == 0 )
+	{
+		// read next command
+		return udd_ep_run( UDI_VENDOR_EP_BULK_OUT,
+							true,
+							rx_buffer[buf_sel_trans].buf,
+							UDI_VENDOR_EPS_SIZE_BULK_HS,
+							udi_lcd_data_recevied);
+	}
+	else
+	{
+		// copy data into graphics memory
+		return udd_ep_run( UDI_VENDOR_EP_BULK_OUT,
+							true,
+							LCD_DATA,
+							UDI_VENDOR_EPS_SIZE_BULK_HS,
+							udi_lcd_data_recevied);
+	}
 }
 
 
-/**
- * \brief Start a transfer on interrupt OUT
- *
- * When the transfer is finished or aborted (stall, reset, ...), the \a callback is called.
- * The \a callback returns the transfer status and eventually the number of byte transfered.
- *
- * \param buf           Buffer on Internal RAM to send or fill.
- *                      It must be align, then use COMPILER_WORD_ALIGNED.
- * \param buf_size      Buffer size to send or fill
- * \param callback      NULL or function to call at the end of transfer
- *
- * \return \c 1 if function was successfully done, otherwise \c 0.
- */
-bool udi_vendor_interrupt_out_run(uint8_t * buf, iram_size_t buf_size,
-		udd_callback_trans_t callback)
+static void udi_lcd_data_recevied(udd_ep_status_t status, iram_size_t n)
 {
-	return udd_ep_run(UDI_VENDOR_EP_INTERRUPT_OUT,
-			false,
-			buf,
-			buf_size,
-			callback);
-}
-#endif
+	uint8_t buf_sel_trans;
 
-#if UDI_VENDOR_EPS_SIZE_BULK_FS
-/**
- * \brief Start a transfer on bulk IN
- *
- * When the transfer is finished or aborted (stall, reset, ...), the \a callback is called.
- * The \a callback returns the transfer status and eventually the number of byte transfered.
- *
- * \param buf           Buffer on Internal RAM to send or fill.
- *                      It must be align, then use COMPILER_WORD_ALIGNED.
- * \param buf_size      Buffer size to send or fill
- * \param callback      NULL or function to call at the end of transfer
- *
- * \return \c 1 if function was successfully done, otherwise \c 0.
- */
-//bool udi_vendor_bulk_in_run(uint8_t * buf, iram_size_t buf_size,
-		//udd_callback_trans_t callback)
-//{
-	//return udd_ep_run(UDI_VENDOR_EP_BULK_IN,
-			//false,
-			//buf,
-			//buf_size,
-			//callback);
-//}
+	if (UDD_EP_TRANSFER_OK != status) {
+		// Abort reception
+		return;
+	}
+	
+	buf_sel_trans = NEXT_BUFFER(udi_lcd_rx_buf_sel);
+	if ( udi_lcd_blt_bytes_to_go == 0 )
+	{
+		// New cmd
+		if ( rx_buffer[buf_sel_trans].cmd.blt.cmd == CMD_BITBLT )
+		{
+			udi_lcd_blt_bytes_to_go = rx_buffer[buf_sel_trans].cmd.blt.width;
+			udi_lcd_blt_bytes_to_go *= rx_buffer[buf_sel_trans].cmd.blt.height;
+			udi_lcd_blt_bytes_to_go *= 2;
+			
+			LCD_BltStart(rx_buffer[buf_sel_trans].cmd.bltrle.x, rx_buffer[buf_sel_trans].cmd.bltrle.y, rx_buffer[buf_sel_trans].cmd.bltrle.width, rx_buffer[buf_sel_trans].cmd.bltrle.height );
+		}
+		else if ( rx_buffer[buf_sel_trans].cmd.light.cmd == CMD_SET_BACKLIGHT && n >= sizeof(rx_buffer[buf_sel_trans].cmd.light) )
+		{
+			
+			LCD_SetBacklight( rx_buffer[buf_sel_trans].cmd.light.intensity );
+		}
+		else if ( rx_buffer[buf_sel_trans].cmd.boot.cmd == CMD_BOOTLOADER  && n >= sizeof(rx_buffer[buf_sel_trans].cmd.boot) )
+		{
+			if ( rx_buffer[buf_sel_trans].cmd.boot.magic[0] == BOOTLOADER_MAGIC1 &&
+			rx_buffer[buf_sel_trans].cmd.boot.magic[1] == BOOTLOADER_MAGIC2 &&
+			rx_buffer[buf_sel_trans].cmd.boot.magic[2] == BOOTLOADER_MAGIC3 &&
+			rx_buffer[buf_sel_trans].cmd.boot.magic[3] == BOOTLOADER_MAGIC4 &&
+			rx_buffer[buf_sel_trans].cmd.boot.magic[4] == BOOTLOADER_MAGIC5 )
+			{
+				// set the ISP_FORCE bit. Force the Watchdog to trigger
+				flashc_erase_gp_fuse_bit(31, true);
+				flashc_write_gp_fuse_bit(31, true);
 
+				cpu_irq_disable();
+				wdt_opt_t opt = {
+					.us_timeout_period = 1000000
+				};
+				wdt_enable(&opt);
+				while(1);
+			}
+		}
+	}
+	else
+	{
+		// Receive data.  That should have been copied via DMA.
+		udi_lcd_blt_bytes_to_go -= n;
+	}
 
-/**
- * \brief Start a transfer on bulk OUT
- *
- * When the transfer is finished or aborted (stall, reset, ...), the \a callback is called.
- * The \a callback returns the transfer status and eventually the number of byte transfered.
- *
- * \param buf           Buffer on Internal RAM to send or fill.
- *                      It must be align, then use COMPILER_WORD_ALIGNED.
- * \param buf_size      Buffer size to send or fill
- * \param callback      NULL or function to call at the end of transfer
- *
- * \return \c 1 if function was successfully done, otherwise \c 0.
- */
-bool udi_vendor_bulk_out_run(uint8_t * buf, iram_size_t buf_size,
-		udd_callback_trans_t callback)
-{
-	return udd_ep_run(UDI_VENDOR_EP_BULK_OUT,
-			false,
-			buf,
-			buf_size,
-			callback);
-}
-#endif
-
-
-#if UDI_VENDOR_EPS_SIZE_ISO_FS
-/**
- * \brief Start a transfer on interrupt IN
- *
- * When the transfer is finished or aborted (stall, reset, ...), the \a callback is called.
- * The \a callback returns the transfer status and eventually the number of byte transfered.
- *
- * \param buf           Buffer on Internal RAM to send or fill.
- *                      It must be align, then use COMPILER_WORD_ALIGNED.
- * \param buf_size      Buffer size to send or fill
- * \param callback      NULL or function to call at the end of transfer
- *
- * \return \c 1 if function was successfully done, otherwise \c 0.
- */
-bool udi_vendor_iso_in_run(uint8_t * buf, iram_size_t buf_size,
-		udd_callback_trans_t callback)
-{
-	return udd_ep_run(UDI_VENDOR_EP_ISO_IN,
-			false,
-			buf,
-			buf_size,
-			callback);
+	udi_lcd_rx_buf_nb[buf_sel_trans] = 0;
+	udi_lcd_rx_trans_ongoing = false;
+	udi_lcd_rx_start();
 }
 
 
-/**
- * \brief Start a transfer on interrupt OUT
- *
- * When the transfer is finished or aborted (stall, reset, ...), the \a callback is called.
- * The \a callback returns the transfer status and eventually the number of byte transfered.
- *
- * \param buf           Buffer on Internal RAM to send or fill.
- *                      It must be align, then use COMPILER_WORD_ALIGNED.
- * \param buf_size      Buffer size to send or fill
- * \param callback      NULL or function to call at the end of transfer
- *
- * \return \c 1 if function was successfully done, otherwise \c 0.
- */
-bool udi_vendor_iso_out_run(uint8_t * buf, iram_size_t buf_size,
-		udd_callback_trans_t callback)
+bool udi_lcd_is_rx_ready(void)
 {
-	return udd_ep_run(UDI_VENDOR_EP_ISO_OUT,
-			false,
-			buf,
-			buf_size,
-			callback);
+	return (udi_lcd_rx_pos < udi_lcd_rx_buf_nb[udi_lcd_rx_buf_sel]);
 }
-#endif
 
-//@}
+
+

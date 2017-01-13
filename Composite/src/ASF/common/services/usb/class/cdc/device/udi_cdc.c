@@ -1054,7 +1054,7 @@ bool udi_cdc_is_tx_ready(void)
 	return udi_cdc_multi_is_tx_ready(0);
 }
 
-int udi_cdc_multi_putc(uint8_t port, int value)
+int udi_cdc_multi_putc(uint8_t port, int value, bool block)
 {
 	irqflags_t flags;
 	bool b_databit_9;
@@ -1072,6 +1072,8 @@ udi_cdc_putc_process_one_byte:
 		if (!udi_cdc_data_running) {
 			return false;
 		}
+		if (!block)
+			return false;
 		goto udi_cdc_putc_process_one_byte;
 	}
 
@@ -1092,7 +1094,7 @@ udi_cdc_putc_process_one_byte:
 
 int udi_cdc_putc(int value)
 {
-	return udi_cdc_multi_putc(0, value);
+	return udi_cdc_multi_putc(0, value, false);
 }
 
 iram_size_t udi_cdc_multi_write_buf(uint8_t port, const void* buf, iram_size_t size)

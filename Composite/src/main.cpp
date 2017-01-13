@@ -51,6 +51,17 @@ static struct SFontData  fontData[] =
 TLCD lcd;
 TLCDText lcdtext(lcd, fontData, countof(fontData) );
 
+
+extern "C" void LCD_BltStart( uint16_t x, uint16_t y, uint16_t nWidth, uint16_t nHeight )
+{
+	lcd.BltStart(x,y,nWidth,nHeight);
+}
+extern "C" void LCD_SetBacklight( uint8_t intenstity )
+{
+	lcd.SetBacklight( intenstity );
+}
+
+
 uint8_t usb_serial_number[USB_DEVICE_GET_SERIAL_NAME_LENGTH];
 
 static void init_usb_serial_number(void)
@@ -117,31 +128,30 @@ int main (void)
 		else if ( touch_complete() )
 		{
 			udi_hid_touch_move( touch_x, touch_y, (touch_z1+touch_z2)/2 );
-			udi_cdc_putc(HEX((touch_x>>12)&0xf));
-			udi_cdc_putc(HEX((touch_x>>8)&0xf));
-			udi_cdc_putc(HEX((touch_x>>4)&0xf));
-			udi_cdc_putc(HEX((touch_x>>0)&0xf));
-			udi_cdc_putc('\n');
+			//udi_cdc_putc(HEX((touch_x>>12)&0xf));
+			//udi_cdc_putc(HEX((touch_x>>8)&0xf));
+			//udi_cdc_putc(HEX((touch_x>>4)&0xf));
+			//udi_cdc_putc(HEX((touch_x>>0)&0xf));
+			//udi_cdc_putc('\n');
 		}
 
 		while ( udi_cdc_is_rx_ready() )
 		{
 			
 			int c = udi_cdc_getc();
-			udi_cdc_putc('-'); udi_cdc_putc(c);
+			//udi_cdc_putc('-'); udi_cdc_putc(c);
 		}
 	}
 }
 
 /*
-							iFace  EP		SIZE
-CTRL						-      0		64
-UDI_CDC_DATA_EP_IN_0        1      1
-UDI_CDC_DATA_EP_OUT_0       1      2
-UDI_CDC_COMM_EP_0           0      3
-UDI_HID_MOUSE_EP_IN			2	   4
-UDI_HID_GENERIC_EP_OUT		3	   5	
-UDI_HID_GENERIC_EP_IN		3	   6
-UDI_VENDOR_EP_BULK_OUT		4	   7
-
+							iFace  EP		SIZE	Banks	Total
+CTRL						-      0		64		1		64
+UDI_VENDOR_EP_BULK_OUT		0	   1		512		2		1024
+UDI_CDC_COMM_EP_0           1      2		
+UDI_CDC_DATA_EP_IN_0        2      3
+UDI_CDC_DATA_EP_OUT_0       2      4
+UDI_HID_TOUCH_EP_IN			3	   5		8		1		8
+UDI_HID_GENERIC_EP_IN		4	   6		64		1		64
+															2368
 */
